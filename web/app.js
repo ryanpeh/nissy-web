@@ -502,6 +502,16 @@ function handleStatus(m) {
 		case "loading":
 			setStatus(m.message);
 			break;
+		case "starting":
+		case "loading-tables":
+			if (!busy) setStatus(m.message || "Starting engine\u2026");
+			break;
+		case "stream-ready":
+			if (!busy) setStatus("Engine ready (" + m.count + " streamed tables).");
+			break;
+		case "no-stream":
+			if (!busy) setStatus(m.message, "warn");
+			break;
 		case "tables":
 			hasTables = !!m.tables;
 			updateControls();

@@ -3,22 +3,22 @@
  *
  * Loads the Emscripten module (out/nissy.js) and runs Nissy's CLI off the main
  * thread. The table directory (/tables, pinned by nissy_env_override.c) is
- * backed by IDBFS so the expensive first-run table generation is persisted in
- * IndexedDB and later runs are fast.
+ * backed by IDBFS so generated tables persist in IndexedDB.
+ *
+ * Big precomputed tables (the optimal one etc.) are *streamed* straight into the
+ * wasm heap via streamlib.js. Streaming sources are fetched from STREAM_INDEXES
+ * concurrently with engine startup, with per-request timeouts, so a slow or
+ * unreachable CDN never blocks the engine from becoming ready.
  *
  * Message protocol
  *   main -> worker : { type: 'run', id, args:[...] }
  *   worker -> main : { id, type: 'out'|'err', line }
  *                    { id, type: 'done' }          (only AFTER syncfs finishes)
+ *                    { type: 'stream', name, off, len }
  *                    { type: 'status', phase, message?, tables? }
  *
- * Status phases: loading, tables, no-idb, load-error, ready, busy, saving,
- *                saved, save-error, fatal.
- *
- * A command is not reported as `done` until FS.syncfs(false, cb) has completed,
- * so a reload or tab close right after `done` cannot lose the freshly generated
- * tables. A `saving` status is posted first so the UI can keep the Run button
- * locked for the whole save.
+ * Status phases: starting, loading-tables, tables, no-stream, no-idb,
+ *                load-error, ready, busy, saving, saved, save-error, fatal.
  */
 "use strict";
 
@@ -31,45 +31,7 @@ var STREAM_INDEXES = [
 	"https://raw.githubusercontent.com/ryanpeh/nissy-web/tables/index.json",
 	"/dist-tables/index.json"
 ];
-
-/* Fetch index.json + per-table manifests. On any failure, return {} so the app
- * falls back to in-browser generation. */
-function loadStreamTables() {
-	function tryIndex(i) {
-		if (i >= STREAM_INDEXES.length)
-			return Promise.reject(new Error("no stream index reachable"));
-		var url = STREAM_INDEXES[i];
-		return fetch(url).then(function (r) {
-			if (!r.ok) throw new Error("HTTP " + r.status);
-			return r.json().then(function (idx) { return { url: url, idx: idx }; });
-		}).catch(function () { return tryIndex(i + 1); });
-	}
-
-	return tryIndex(0).then(function (res) {
-		var base = res.url.replace(/index\.json$/, "");
-		var cbase = res.idx.chunkBase || base;
-		return Promise.all((res.idx.tables || []).map(function (n) {
-			return fetch(base + n + ".manifest.json")
-				.then(function (r) {
-					if (!r.ok) throw new Error("manifest " + n);
-					return r.json();
-				})
-				.then(function (m) {
-					m.chunks = m.chunks.map(function (c) { return cbase + c; });
-					return [n, m];
-				});
-		})).then(function (pairs) {
-			var map = {};
-			pairs.forEach(function (p) { map[p[0]] = p[1]; });
-			post({ type: "status", phase: "stream-ready", count: pairs.length, base: base });
-			return map;
-		});
-	}).catch(function (e) {
-		post({ type: "status", phase: "no-stream",
-			message: "Streamed tables unavailable (" + e + "); using generated tables." });
-		return {};
-	});
-}
+var FETCH_TIMEOUT_MS = 15000;
 
 var instance = null;
 var ready = false;
@@ -92,6 +54,57 @@ function onOut(line) {
 
 function onErr(line) {
 	emit("err", String(line));
+}
+
+/* fetch() with a timeout so a hung CDN can't stall the app. */
+function fetchJson(url, ms) {
+	var ctrl = new AbortController();
+	var timer = setTimeout(function () { ctrl.abort(); }, ms);
+	return fetch(url, { signal: ctrl.signal }).then(function (r) {
+		clearTimeout(timer);
+		if (!r.ok) throw new Error("HTTP " + r.status);
+		return r.json();
+	}).catch(function (e) {
+		clearTimeout(timer);
+		throw e;
+	});
+}
+
+/* Fetch index.json + per-table manifests, with timeouts. Resolves to a map
+ * (possibly empty) and never rejects. */
+function loadStreamTables() {
+	function tryIndex(i) {
+		if (i >= STREAM_INDEXES.length)
+			return Promise.reject(new Error("no stream index reachable"));
+		var url = STREAM_INDEXES[i];
+		return fetchJson(url, FETCH_TIMEOUT_MS).then(function (idx) {
+			return { url: url, idx: idx };
+		}).catch(function () { return tryIndex(i + 1); });
+	}
+
+	return tryIndex(0).then(function (res) {
+		var base = res.url.replace(/index\.json$/, "");
+		var cbase = res.idx.chunkBase || base;
+		return Promise.all((res.idx.tables || []).map(function (n) {
+			return fetchJson(base + n + ".manifest.json", FETCH_TIMEOUT_MS)
+				.then(function (m) {
+					m.chunks = m.chunks.map(function (c) { return cbase + c; });
+					return [n, m];
+				});
+		})).then(function (pairs) {
+			var map = {};
+			pairs.forEach(function (p) { map[p[0]] = p[1]; });
+			post({ type: "status", phase: "stream-ready", count: pairs.length, base: base });
+			return map;
+		});
+	}).catch(function (e) {
+		post({
+			type: "status",
+			phase: "no-stream",
+			message: "Streamed tables unavailable (" + e + "); using generated tables.",
+		});
+		return {};
+	});
 }
 
 function tablesPresent() {
@@ -158,11 +171,7 @@ function setupFS() {
 				resolve();
 				return;
 			}
-			post({
-				type: "status",
-				phase: "tables",
-				tables: tablesPresent(),
-			});
+			post({ type: "status", phase: "tables", tables: tablesPresent() });
 			resolve();
 		});
 	});
@@ -196,11 +205,7 @@ function saveThenDone() {
 				message: "IDBFS save error: " + err,
 			});
 		} else {
-			post({
-				type: "status",
-				phase: "tables",
-				tables: tablesPresent(),
-			});
+			post({ type: "status", phase: "tables", tables: tablesPresent() });
 			post({ type: "status", phase: "saved" });
 		}
 		post({ id: id, type: "done" });
@@ -239,30 +244,36 @@ self.onmessage = function (ev) {
 	runCommand(msg);
 };
 
-loadStreamTables().then(function (tables) {
-	return createNissy({
-		locateFile: function (p) {
-			return "out/" + p;
-		},
-		nissyStreamTables: tables,
-		nissyStreamLog: function (name, off, len) {
-			post({ type: "stream", name: name, off: off, len: len });
-		},
-		print: onOut,
-		printErr: onErr,
-	});
+/* Engine startup runs concurrently with the table fetch: we do NOT wait on the
+ * network before creating the module, we only wait (bounded, thanks to the
+ * fetch timeouts) before declaring the engine ready. */
+post({ type: "status", phase: "starting", message: "Starting engine\u2026" });
+post({ type: "status", phase: "loading-tables", message: "Loading table sources\u2026" });
+var tablesPromise = loadStreamTables();
+
+createNissy({
+	locateFile: function (p) {
+		return "out/" + p;
+	},
+	nissyStreamLog: function (name, off, len) {
+		post({ type: "stream", name: name, off: off, len: len });
+	},
+	print: onOut,
+	printErr: onErr,
 })
 	.then(function (mod) {
 		instance = mod;
 		return setupFS();
 	})
 	.then(function () {
+		return tablesPromise;
+	})
+	.then(function (tables) {
+		// streamlib reads Module.nissyStreamTables at call time, so attaching it
+		// here (after module creation) is fine.
+		if (instance) instance.nissyStreamTables = tables;
 		ready = true;
-		post({
-			type: "status",
-			phase: "ready",
-			persisted: idbAvailable,
-		});
+		post({ type: "status", phase: "ready", persisted: idbAvailable });
 		var q = pending;
 		pending = [];
 		q.forEach(runCommand);
