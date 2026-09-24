@@ -1,9 +1,7 @@
 .DS_Store
 # build artifacts
 poc/out/
-web/out/
-lightplus/web/out/
-lightplus/nissy
+lightplus/lightplus/nissy
 lightplus/lptest
 # generated tables / caches (regenerate with gen-nxopt31.sh)
 tables/
