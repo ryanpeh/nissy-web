@@ -1,0 +1,15 @@
+{
+  "chunkBase": "",
+  "tables": [
+    "invtables",
+    "mtables",
+    "pt_corners_HTM",
+    "pt_drud_sym16_HTM",
+    "pt_nxopt31_HTM",
+    "sd_cp_16_new",
+    "sd_eofbepos_16_new",
+    "symc_moves",
+    "symc_trans",
+    "ttables"
+  ]
+}

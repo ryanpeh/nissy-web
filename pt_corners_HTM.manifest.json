@@ -1,0 +1,10 @@
+{
+  "name": "pt_corners_HTM",
+  "size": 44090052,
+  "chunkSize": 100663296,
+  "count": 1,
+  "sha256": "b87e45c39e8042b0dd4fc2ee497c6c02399ac43c3084690e115282fce2a4f673",
+  "chunks": [
+    "pt_corners_HTM.000"
+  ]
+}

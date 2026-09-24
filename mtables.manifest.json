@@ -1,0 +1,10 @@
+{
+  "name": "mtables",
+  "size": 19664700,
+  "chunkSize": 100663296,
+  "count": 1,
+  "sha256": "8530364e5b0c3d8fb147e72d5a85d1f10e6f7b12b192cb803752b88c5f9ecd46",
+  "chunks": [
+    "mtables.000"
+  ]
+}

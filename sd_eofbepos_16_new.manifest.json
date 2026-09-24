@@ -1,0 +1,10 @@
+{
+  "name": "sd_eofbepos_16_new",
+  "size": 13196008,
+  "chunkSize": 100663296,
+  "count": 1,
+  "sha256": "241a967ba558a2b0b0e20979190bce04d0a46ba1b3007d11084a8ec15677b840",
+  "chunks": [
+    "sd_eofbepos_16_new.000"
+  ]
+}

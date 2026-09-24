@@ -1,0 +1,10 @@
+{
+  "name": "ttables",
+  "size": 15546240,
+  "chunkSize": 100663296,
+  "count": 1,
+  "sha256": "5a3697b7dea5c3a3519b2f42545120d1ebccdee0d77a38bbfb983ca1209407b1",
+  "chunks": [
+    "ttables.000"
+  ]
+}

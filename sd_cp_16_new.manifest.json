@@ -1,0 +1,10 @@
+{
+  "name": "sd_cp_16_new",
+  "size": 528136,
+  "chunkSize": 100663296,
+  "count": 1,
+  "sha256": "2ca28e069cfc812046e1a1a705b301294d941a3bfedadab314e1609780126185",
+  "chunks": [
+    "sd_cp_16_new.000"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "invtables",
+  "size": 322423200,
+  "chunkSize": 100663296,
+  "count": 4,
+  "sha256": "89e20cbe829d83fc364ead6fa0f2d8e1e1f3cfd13ba747856d1f96e921ee2c3a",
+  "chunks": [
+    "invtables.000",
+    "invtables.001",
+    "invtables.002",
+    "invtables.003"
+  ]
+}

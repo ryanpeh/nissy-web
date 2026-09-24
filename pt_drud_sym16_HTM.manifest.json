@@ -1,0 +1,10 @@
+{
+  "name": "pt_drud_sym16_HTM",
+  "size": 70454337,
+  "chunkSize": 100663296,
+  "count": 1,
+  "sha256": "b3623983bb90e7f9893e0e5017f9d0713c7cf3cd4cc908d83916f09b2e782d44",
+  "chunks": [
+    "pt_drud_sym16_HTM.000"
+  ]
+}

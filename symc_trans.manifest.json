@@ -1,0 +1,12 @@
+{
+  "name": "symc_trans",
+  "size": 202396800,
+  "chunkSize": 100663296,
+  "count": 3,
+  "sha256": "b5d4b77b7c41cc1f630ae3b273658219b4f47d8a5833d09de8cfb7493391b3c0",
+  "chunks": [
+    "symc_trans.000",
+    "symc_trans.001",
+    "symc_trans.002"
+  ]
+}

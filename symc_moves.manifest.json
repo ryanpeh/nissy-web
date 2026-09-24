@@ -1,0 +1,10 @@
+{
+  "name": "symc_moves",
+  "size": 44350680,
+  "chunkSize": 100663296,
+  "count": 1,
+  "sha256": "a0c038b4e9aa52f35d54a1fd43fa81bbe5a5315a288cfe6ab07d99aac5c6e90a",
+  "chunks": [
+    "symc_moves.000"
+  ]
+}

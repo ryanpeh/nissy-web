@@ -1,9 +1,0 @@
-<!DOCTYPE html><meta charset="utf-8"><title>mtest</title>
-<script src="out/nissy.js"></script>
-<script>
-window.S="pending";
-createNissy({ locateFile:function(p){return "out/"+p;},
-  print:function(s){window.S="out:"+s;}, printErr:function(s){window.S="err:"+s;} })
- .then(function(m){ window.S="loaded"; try{m.callMain(["version"]);window.S="ran:"+window.S;}catch(e){window.S="callMain:"+e;} })
- .catch(function(e){ window.S="fatal:"+(e&&e.stack||e); });
-</script>
