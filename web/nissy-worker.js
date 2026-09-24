@@ -231,8 +231,21 @@ function runCommand(msg) {
 }
 
 self.onmessage = function (ev) {
-	var msg = ev.data;
-	if (!msg || msg.type !== "run") return;
+	var msg = ev.data || {};
+	if (msg.type === "closeCache") {
+		/* Release OPFS sync access handles so the page can delete them. */
+		if (instance && instance.nissyStreamCache) {
+			var hs = instance.nissyStreamCache.handles || {};
+			Object.keys(hs).forEach(function (k) {
+				try { hs[k].close(); } catch (e) { /* ignore */ }
+			});
+			instance.nissyStreamCache = null;
+		}
+		streamTables = {};
+		post({ type: "cacheClosed" });
+		return;
+	}
+	if (msg.type !== "run") return;
 	if (!ready || running) {
 		pending.push(msg);
 		post({

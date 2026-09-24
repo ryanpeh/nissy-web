@@ -75,6 +75,7 @@ var ready = false;
 var busy = false;
 var saving = false;
 var hasTables = false;
+var hasOPFS = false;   /* OPFS chunk cache present */
 var justSaved = false;
 var nextId = 1;
 var startTime = 0;
@@ -304,7 +305,7 @@ function updateControls() {
 	clearEl.disabled = locked;
 	runEl.disabled = locked;
 	stopEl.disabled = !busy || saving;
-	deleteEl.disabled = locked || !hasTables;
+	deleteEl.disabled = locked || (!hasTables && !hasOPFS);
 	runEl.textContent = busy ? "Running\u2026" : "Run";
 }
 
@@ -344,8 +345,8 @@ function fmtBytes(n) {
 function refreshCacheUsage() {
 	if (!navigator.storage || !navigator.storage.estimate) {
 		cacheUsageEl.textContent =
-			"Storage estimate unavailable (tables cached: " +
-			(hasTables ? "yes" : "no") + ").";
+			"Storage estimate unavailable (cached: " +
+			((hasTables || hasOPFS) ? "yes" : "no") + ").";
 		return;
 	}
 	navigator.storage
@@ -355,7 +356,7 @@ function refreshCacheUsage() {
 			var quota = fmtBytes(est.quota || 0);
 			cacheUsageEl.textContent =
 				"Origin storage: " + used + " used of " + quota +
-				(hasTables ? " (tables cached)" : " (no cached tables)");
+				((hasTables || hasOPFS) ? " (tables cached)" : " (no cached tables)");
 		})
 		.catch(function (e) {
 			cacheUsageEl.textContent = "Storage estimate failed: " + e;
@@ -412,7 +413,7 @@ copyOutEl.addEventListener("click", function () {
 });
 
 deleteEl.addEventListener("click", function () {
-	if (busy || !hasTables) return;
+	if (busy || (!hasTables && !hasOPFS)) return;
 	deleteCache();
 });
 
@@ -449,17 +450,54 @@ function deleteDatabase(name) {
 	});
 }
 
+/* Remove the streamed-chunk cache from the Origin Private File System. Call
+ * only after the worker (which holds the sync access handles) is terminated. */
+function deleteOPFS() {
+	if (typeof navigator === "undefined" || !navigator.storage ||
+	    !navigator.storage.getDirectory)
+		return Promise.resolve();
+	function attempt(n) {
+		return navigator.storage.getDirectory().then(function (root) {
+			return root.removeEntry("nissy-tables", { recursive: true });
+		}).catch(function (e) {
+			if (n < 5)
+				return new Promise(function (r) { setTimeout(r, 300); })
+				    .then(function () { return attempt(n + 1); });
+			return null; /* give up; not fatal */
+		});
+	}
+	return attempt(0);
+}
+
+function closeWorkerCache() {
+	return new Promise(function (resolve) {
+		var settled = false;
+		function done() {
+			if (settled) return;
+			settled = true;
+			worker.removeEventListener("message", handler);
+			resolve();
+		}
+		function handler(ev) { if (ev.data && ev.data.type === "cacheClosed") done(); }
+		worker.addEventListener("message", handler);
+		try { worker.postMessage({ type: "closeCache" }); }
+		catch (e) { done(); return; }
+		setTimeout(done, 1500);
+	});
+}
+
 function deleteCache() {
 	busy = true;
 	updateControls();
 	setStatus("Deleting cached tables\u2026");
 
-	/* The worker keeps an open IDBFS connection; terminate it first so
-	 * deleteDatabase() is not blocked. Reload afterwards to return to the
-	 * first-run state. */
-	worker.terminate();
-
-	listTableDatabases()
+	/* Have the worker release its OPFS handles, then terminate it (which also
+	 * releases the IDBFS connection) before deleting storage. */
+	closeWorkerCache()
+		.then(function () {
+			worker.terminate();
+			return listTableDatabases();
+		})
 		.then(function (names) {
 			return Promise.all(
 				names.map(function (n) {
@@ -467,6 +505,7 @@ function deleteCache() {
 				})
 			);
 		})
+		.then(deleteOPFS)
 		.then(function () {
 			setStatus("Cache deleted. Reloading\u2026");
 			location.reload();
@@ -579,6 +618,7 @@ function handleStatus(m) {
 			break;
 		case "ready":
 			ready = true;
+			hasOPFS = !!m.cached;
 			updateControls();
 			if (m.persisted === false) {
 				setStatus("Engine ready (no IndexedDB persistence).", "warn");
