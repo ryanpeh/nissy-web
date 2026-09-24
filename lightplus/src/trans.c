@@ -1,4 +1,5 @@
 #include "trans.h"
+#include "utils.h"
 #include "wasm_stream.h"
 
 /* Local functions ***********************************************************/
@@ -382,6 +383,7 @@ init_trans(void)
 				}
 			}
 		}
+		nissy_progress("ttables", m, NTRANS);
 	}
 
 	if (!write_ttables_file())

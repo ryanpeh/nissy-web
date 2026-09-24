@@ -37,6 +37,7 @@ int         perm_to_index(int *a, int n);
 int         powint(int a, int b);
 int         subset_to_index(int *a, int n, int k);
 void        sum_arrays_mod(int *src, int *dst, int n, int m);
+void        nissy_progress(const char *name, uint64_t done, uint64_t total);
 void        swap(int *a, int *b);
 void        swapu64(uint64_t *a, uint64_t *b);
 

@@ -1,4 +1,5 @@
 #include "cube.h"
+#include "utils.h"
 #include "wasm_stream.h"
 
 /* Local functions ***********************************************************/
@@ -918,6 +919,7 @@ init_inverse(void)
 			eoinv[DR] = eoaux[where_is_edge(c, DR)];
 			eo_invtable_s[ui][uj] = digit_array_to_int(eoinv,11,2);
 		}
+		nissy_progress("invtables-eo", ui, POW2TO11);
 	}
 
 	for (ui = 0; ui < FACTORIAL8; ui++) {
@@ -933,6 +935,7 @@ init_inverse(void)
 			co_invtable[uj][ui] =
 			    (uint16_t)arrays_to_cube(inv, pf_coud).coud;
 		}
+		nissy_progress("invtables-co", ui, FACTORIAL8);
 	}
 	
 	for (ui = 0; ui < FACTORIAL6; ui++) {

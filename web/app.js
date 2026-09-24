@@ -186,7 +186,10 @@ function setDeterminate(pct, label) {
  * pruning-table BFS reports an exact count; other phases are indeterminate. */
 function noteProgress(line) {
 	var m;
-	if ((m = line.match(/Cannot load (\S+), generating it/))) {
+	if ((m = line.match(/^\[progress\] (\S+) (\d+)$/))) {
+		setDeterminate(parseInt(m[2], 10),
+		    "Generating " + m[1] + "\u2026 " + m[2] + "%");
+	} else if ((m = line.match(/Cannot load (\S+), generating it/))) {
 		setIndeterminate("Generating " + m[1] + "\u2026");
 	} else if ((m = line.match(/Found (\d+) classes/))) {
 		setIndeterminate("Found " + m[1] + " symmetry classes\u2026");
@@ -541,7 +544,7 @@ function onWorkerMessage(ev) {
 		return;
 	}
 	if (m.type === "err") {
-		appendLog(m.line);
+		if (!/^\[progress\] /.test(m.line)) appendLog(m.line);
 		noteProgress(m.line);
 		return;
 	}

@@ -1,5 +1,7 @@
 #include "utils.h"
 
+#include <stdio.h>
+
 void
 apply_permutation(int *perm, int *set, int n)
 {
@@ -281,3 +283,29 @@ swapu64(uint64_t *a, uint64_t *b)
 	*b  = aux;
 }
 
+
+/* Sparse progress output for the long table-generation loops. Prints
+ * "[progress] <name> <pct>" at ~every 10% (and always at 0 and 100), which the
+ * web UI parses to show a determinate progress bar. */
+void
+nissy_progress(const char *name, uint64_t done, uint64_t total)
+{
+	static const char *lastname = 0;
+	static int lastpct = -1;
+	int pct;
+
+	if (total == 0)
+		return;
+
+	pct = (int)((100 * done) / total);
+	if (lastname == 0 || strcmp(lastname, name) != 0) {
+		lastname = name;
+		lastpct = -1;
+	}
+	if (pct == lastpct)
+		return;
+	if (pct % 10 != 0 && pct != 100)
+		return;
+	lastpct = pct;
+	fprintf(stderr, "[progress] %s %d\n", name, pct);
+}

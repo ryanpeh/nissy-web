@@ -1,4 +1,5 @@
 #include "moves.h"
+#include "utils.h"
 #include "wasm_stream.h"
 
 /* Local functions ***********************************************************/
@@ -553,6 +554,7 @@ init_moves(void)
 			c = apply_move_cubearray(m, c, pf_cpos);
 			cpos_mtable[m][ui] = c.cpos;
 		}
+		nissy_progress("mtables", m, NMOVES);
 	}
 
 	if (!write_mtables_file())

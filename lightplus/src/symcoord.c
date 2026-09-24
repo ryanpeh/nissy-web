@@ -1,4 +1,5 @@
 #include "symcoord.h"
+#include "utils.h"
 #include "wasm_stream.h"
 
 /* These constants have been computed generating the respective SymData */
@@ -386,6 +387,7 @@ gensym(SymData *sd)
 			}
 			nreps++;
 		}
+		nissy_progress(sd->filename, i, sd->coord->max);
 	}
 
 	sd->sym_coord->max = nreps;
@@ -657,6 +659,7 @@ init_symc_moves(void)
 			ttrep_move_eofbepos_16[j][i] =
 			    sd_eofbepos_16.transtorep[coo];
 		}
+		nissy_progress("symc_moves", i, CLASSES_EOFBEPOS_16);
 	}
 
 	if (!write_symc_moves_file())
@@ -691,6 +694,7 @@ init_symc_trans(void)
 			c = apply_trans(t, c);
 			trans_eofbepos[t][i] = (c.epose/24)*POW2TO11 + c.eofb;
 		}
+		nissy_progress("symc_trans", i, POW2TO11*BINOM12ON4);
 	}
 
 	aux = malloc(sizeof(CubeArray));
