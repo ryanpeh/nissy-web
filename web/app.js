@@ -192,6 +192,22 @@ function noteProgress(line) {
 	}
 }
 
+/* Download progress for streamed tables. The worker reports each 8 MB piece
+ * with the offset within the table file and the table's total size. */
+var streamBytes = 0;
+function handleStream(m) {
+	streamBytes += m.len || 0;
+	if (m.total) {
+		var cur = Math.min((m.off || 0) + (m.len || 0), m.total);
+		var pct = Math.round((100 * cur) / m.total);
+		setDeterminate(pct, "Downloading " + m.name + "\u2026 " + pct +
+		    "%  (" + fmtBytes(streamBytes) + ")");
+	} else {
+		setIndeterminate("Downloading " + m.name + "\u2026  (" +
+		    fmtBytes(streamBytes) + ")");
+	}
+}
+
 /* ---- UI persistence ----------------------------------------------------- */
 
 var LS_KEY = "nissyweb:ui";
@@ -362,6 +378,7 @@ runEl.addEventListener("click", function () {
 	justSaved = false;
 	saveUI();
 	startTimer();
+	streamBytes = 0;
 	showProgress();
 	setIndeterminate("Starting\u2026");
 	busy = true;
@@ -471,6 +488,10 @@ function onWorkerMessage(ev) {
 	if (m.type === "err") {
 		appendLog(m.line);
 		noteProgress(m.line);
+		return;
+	}
+	if (m.type === "stream") {
+		handleStream(m);
 		return;
 	}
 	if (m.type === "done") {

@@ -86,7 +86,7 @@ limit doesn't apply.
 
 ## Limitations
 
-- First load downloads ~3 GB once (cached in IndexedDB afterwards).
+- First load downloads ~3 GB once; chunks are cached in **OPFS** and reused on later visits (only the small generated tables go in IndexedDB).
 - Desktop Chromium/Firefox only (Chrome's wasm memory ceiling is ~3.6 GB); not
   Safari or mobile.
 - Single-threaded (deliberate, for header-less static hosting).

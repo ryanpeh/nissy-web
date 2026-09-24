@@ -39,6 +39,7 @@ var idbAvailable = false;
 var currentId = null;
 var running = false;
 var pending = [];
+var streamTables = {};   /* name -> manifest, for stream progress totals */
 
 function post(msg) {
 	self.postMessage(msg);
@@ -244,6 +245,53 @@ self.onmessage = function (ev) {
 	runCommand(msg);
 };
 
+/*
+ * Open an OPFS sync access handle for every table chunk. streamlib.js then reads
+ * chunks from OPFS when present, and writes freshly fetched bytes into it, so a
+ * chunk is downloaded at most once per origin. Returns null if OPFS is
+ * unavailable (then streamlib just fetches every time).
+ */
+function setupCache(tables) {
+	if (typeof navigator === "undefined" || !navigator.storage ||
+	    !navigator.storage.getDirectory)
+		return Promise.resolve(null);
+
+	if (navigator.storage.persist)
+		try { navigator.storage.persist(); } catch (e) { /* ignore */ }
+
+	return navigator.storage.getDirectory().then(function (root) {
+		return root.getDirectoryHandle("nissy-tables", { create: true })
+			.then(function (dir) {
+				var handles = {}, sizes = {}, jobs = [];
+				Object.keys(tables).forEach(function (name) {
+					var m = tables[name];
+					m.chunks.forEach(function (url, i) {
+						var last = (i === m.chunks.length - 1);
+						var expected = last
+						    ? m.size - m.chunkSize * (m.chunks.length - 1)
+						    : m.chunkSize;
+						var fname = encodeURIComponent(url)
+						    .replace(/%/g, "_").slice(-200);
+						jobs.push(dir.getFileHandle(fname, { create: true })
+							.then(function (fh) {
+								return fh.createSyncAccessHandle();
+							})
+							.then(function (h) {
+								handles[url] = h;
+								sizes[url] = expected;
+							})
+							.catch(function () { /* per-file failure: skip */ }));
+					});
+				});
+				return Promise.all(jobs).then(function () {
+					return { handles: handles, sizes: sizes };
+				});
+			});
+	}).catch(function () {
+		return null;
+	});
+}
+
 /* Engine startup runs concurrently with the table fetch: we do NOT wait on the
  * network before creating the module, we only wait (bounded, thanks to the
  * fetch timeouts) before declaring the engine ready. */
@@ -256,7 +304,8 @@ createNissy({
 		return "out/" + p;
 	},
 	nissyStreamLog: function (name, off, len) {
-		post({ type: "stream", name: name, off: off, len: len });
+		var total = (streamTables[name] && streamTables[name].size) || 0;
+		post({ type: "stream", name: name, off: off, len: len, total: total });
 	},
 	print: onOut,
 	printErr: onErr,
@@ -269,14 +318,25 @@ createNissy({
 		return tablesPromise;
 	})
 	.then(function (tables) {
-		// streamlib reads Module.nissyStreamTables at call time, so attaching it
-		// here (after module creation) is fine.
-		if (instance) instance.nissyStreamTables = tables;
-		ready = true;
-		post({ type: "status", phase: "ready", persisted: idbAvailable });
-		var q = pending;
-		pending = [];
-		q.forEach(runCommand);
+		streamTables = tables;
+		// streamlib reads Module.nissyStreamTables / nissyStreamCache at call
+		// time, so attaching them here (after module creation) is fine.
+		return setupCache(tables).then(function (cache) {
+			if (instance) {
+				instance.nissyStreamTables = tables;
+				instance.nissyStreamCache = cache;
+			}
+			ready = true;
+			post({
+				type: "status",
+				phase: "ready",
+				persisted: idbAvailable,
+				cached: !!cache,
+			});
+			var q = pending;
+			pending = [];
+			q.forEach(runCommand);
+		});
 	})
 	.catch(function (e) {
 		post({

@@ -60,13 +60,26 @@ mergeInto(LibraryManager.library, {
           if (g !== cl) return 0;
           HEAPU8.set(b, dst);
         } else {
-          var xhr = new XMLHttpRequest();
-          xhr.open('GET', src, false);
-          xhr.responseType = 'arraybuffer';
-          xhr.setRequestHeader('Range', 'bytes=' + co + '-' + (co + cl - 1));
-          xhr.send(null);
-          if (xhr.status !== 206 && xhr.status !== 200) return 0;
-          HEAPU8.set(new Uint8Array(xhr.response), dst);
+          var cache = Module.nissyStreamCache;
+          var h = cache && cache.handles && cache.handles[src];
+          var expected = cache && cache.sizes && cache.sizes[src];
+          if (h && expected && h.getSize() === expected) {
+            /* already cached: read straight into the heap (disk -> wasm) */
+            h.read(HEAPU8.subarray(dst, dst + cl), { at: co });
+          } else {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', src, false);
+            xhr.responseType = 'arraybuffer';
+            xhr.setRequestHeader('Range', 'bytes=' + co + '-' + (co + cl - 1));
+            xhr.send(null);
+            if (xhr.status !== 206 && xhr.status !== 200) return 0;
+            var bytes = new Uint8Array(xhr.response);
+            HEAPU8.set(bytes, dst);
+            if (h) {
+              try { h.write(bytes, { at: co }); h.flush(); }
+              catch (e) { /* ignore cache write errors */ }
+            }
+          }
         }
         log(off, cl);
         dst += cl; off += cl; remaining -= cl;
