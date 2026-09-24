@@ -1,0 +1,5 @@
+# Emscripten build artifacts
+out/
+
+# Node NODEFS table cache (generated at runtime; do not commit)
+.tables-node/

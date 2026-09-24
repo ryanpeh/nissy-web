@@ -1,0 +1,13 @@
+.DS_Store
+# build artifacts
+poc/out/
+web/out/
+lightplus/web/out/
+lightplus/nissy
+lightplus/lptest
+# generated tables / caches (regenerate with gen-nxopt31.sh)
+tables/
+web/.tables-node/
+lightplus/web/tables-chunked/
+# hosting chunks live on the `tables` branch, not main
+dist-tables/
