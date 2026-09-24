@@ -63,6 +63,7 @@ var progressLabelEl = document.getElementById("progressLabel");
 var progressBarEl = document.getElementById("progressBar");
 var copyScrambleEl = document.getElementById("copyScramble");
 var copyOutEl = document.getElementById("copyOut");
+var tableModeEl = document.getElementById("tableMode");
 
 STEPS.forEach(function (s) {
 	var o = document.createElement("option");
@@ -83,8 +84,15 @@ var timerHandle = null;
 
 var worker = null;
 
+/* "generate" (default): generate tables in-browser. "download": stream the
+ * precomputed chunks. In generate mode only the optimal table is streamed,
+ * because generating it is not feasible in wasm. */
+var tableMode = "generate";
+try { tableMode = localStorage.getItem("nissyweb:tables") || "generate"; } catch (e) { /* ignore */ }
+if (tableModeEl) tableModeEl.value = tableMode;
+
 function startWorker() {
-	worker = new Worker("nissy-worker.js");
+	worker = new Worker("nissy-worker.js?mode=" + encodeURIComponent(tableMode));
 	worker.onmessage = onWorkerMessage;
 	worker.onerror = onWorkerError;
 }
@@ -411,6 +419,14 @@ copyOutEl.addEventListener("click", function () {
 	el.addEventListener("input", saveUI);
 	el.addEventListener("change", saveUI);
 });
+
+if (tableModeEl) {
+	tableModeEl.addEventListener("change", function () {
+		try { localStorage.setItem("nissyweb:tables", tableModeEl.value); }
+		catch (e) { /* ignore */ }
+		location.reload();   /* the worker reads the mode at creation */
+	});
+}
 
 deleteEl.addEventListener("click", function () {
 	if (busy || (!hasTables && !hasOPFS)) return;

@@ -33,6 +33,14 @@ var STREAM_INDEXES = [
 ];
 var FETCH_TIMEOUT_MS = 15000;
 
+/* Which tables to stream. "download" streams everything; "generate" (default)
+ * streams only pt_nxopt31_HTM, whose generation is not feasible in wasm — every
+ * other table (support files, light, twophase, ...) is generated in-browser. */
+var MODE = (function () {
+	var m = /[?&]mode=([^&]+)/.exec(self.location.search);
+	return m ? decodeURIComponent(m[1]) : "generate";
+})();
+
 var instance = null;
 var ready = false;
 var idbAvailable = false;
@@ -86,7 +94,10 @@ function loadStreamTables() {
 	return tryIndex(0).then(function (res) {
 		var base = res.url.replace(/index\.json$/, "");
 		var cbase = res.idx.chunkBase || base;
-		return Promise.all((res.idx.tables || []).map(function (n) {
+		var names = res.idx.tables || [];
+		if (MODE !== "download")
+			names = names.filter(function (n) { return n === "pt_nxopt31_HTM"; });
+		return Promise.all(names.map(function (n) {
 			return fetchJson(base + n + ".manifest.json", FETCH_TIMEOUT_MS)
 				.then(function (m) {
 					m.chunks = m.chunks.map(function (c) { return cbase + c; });

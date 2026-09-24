@@ -152,6 +152,15 @@
 		<span id="timer"></span>
 	</div>
 
+	<div class="row">
+		<label for="tableMode">Tables</label>
+		<select id="tableMode">
+			<option value="generate">Generate locally (default, no download)</option>
+			<option value="download">Download precomputed (faster, uses data)</option>
+		</select>
+		<span class="hint">Changing this reloads the page.</span>
+	</div>
+
 	<div class="field">
 		<label for="custom">Other command <span class="hint">(overrides the selector above)</span></label>
 		<input type="text" id="custom" spellcheck="false"
@@ -161,8 +170,9 @@
 	<details class="hintbox">
 		<summary>Help / notes</summary>
 		<div class="hint">
-			Precomputed tables are <b>streamed</b> from the network and cached in
-			<b>OPFS</b>, so only the first use of a given table downloads it.
+			By default tables are <b>generated in-browser</b> (cached in
+			IndexedDB); switch <b>Tables</b> to "Download precomputed" to stream
+			them instead (cached in OPFS). Either way it is a one-time cost.
 			<b>light</b> is a true <i>optimal</i> solve (~114&nbsp;MB of tables:
 			<code>pt_drud_sym16_HTM</code> + <code>pt_corners_HTM</code>).
 			<b>optimal</b> streams the full ~2.3&nbsp;GB table. The progress bar

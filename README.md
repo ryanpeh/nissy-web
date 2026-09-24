@@ -61,9 +61,17 @@ want to stream from a local `/dist-tables/`.)
 
 ## Tables
 
-The app needs pruning tables:
+The app needs pruning tables. There is a **Tables** selector:
 
-- **Streamed (normal):** the worker fetches
+- **Generate locally (default):** tables are generated in-browser and cached
+  in IndexedDB (support set ~40 s, then `light` tables ~1-2 min, one time).
+  Only the optimal table is streamed, since it can't be generated in wasm.
+- **Download precomputed:** stream all precomputed chunks (faster on a fast
+  connection, but uses data) and cache them in OPFS.
+
+Details:
+
+- **Streamed:** the worker fetches
   `https://raw.githubusercontent.com/ryanpeh/nissy-web/tables/index.json` plus
   per-table manifests, then streams chunks. It falls back to a same-origin
   `/dist-tables/` if the hosted copy is unreachable.
