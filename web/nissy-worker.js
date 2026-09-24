@@ -24,20 +24,31 @@
 
 importScripts("out/nissy.js");
 
-/* Where the streamed table chunks live. Same-origin by default (e.g. /dist-tables/
- * served next to the app); set to a CDN URL after hosting (see ../HOSTING.md). */
-var STREAM_INDEX = "/dist-tables/index.json";
+/* Where the streamed table chunks live. Tried in order: the hosted copy on
+ * GitHub raw (the `tables` branch of ryanpeh/nissy-web), then a same-origin
+ * /dist-tables/ (for local dev). See ../HOSTING.md. */
+var STREAM_INDEXES = [
+	"https://raw.githubusercontent.com/ryanpeh/nissy-web/tables/index.json",
+	"/dist-tables/index.json"
+];
 
 /* Fetch index.json + per-table manifests. On any failure, return {} so the app
  * falls back to in-browser generation. */
 function loadStreamTables() {
-	return fetch(STREAM_INDEX).then(function (r) {
-		if (!r.ok) throw new Error("index HTTP " + r.status);
-		return r.json();
-	}).then(function (idx) {
-		var base = STREAM_INDEX.replace(/index\.json$/, "");
-		var cbase = idx.chunkBase || base;
-		return Promise.all((idx.tables || []).map(function (n) {
+	function tryIndex(i) {
+		if (i >= STREAM_INDEXES.length)
+			return Promise.reject(new Error("no stream index reachable"));
+		var url = STREAM_INDEXES[i];
+		return fetch(url).then(function (r) {
+			if (!r.ok) throw new Error("HTTP " + r.status);
+			return r.json().then(function (idx) { return { url: url, idx: idx }; });
+		}).catch(function () { return tryIndex(i + 1); });
+	}
+
+	return tryIndex(0).then(function (res) {
+		var base = res.url.replace(/index\.json$/, "");
+		var cbase = res.idx.chunkBase || base;
+		return Promise.all((res.idx.tables || []).map(function (n) {
 			return fetch(base + n + ".manifest.json")
 				.then(function (r) {
 					if (!r.ok) throw new Error("manifest " + n);
@@ -50,6 +61,7 @@ function loadStreamTables() {
 		})).then(function (pairs) {
 			var map = {};
 			pairs.forEach(function (p) { map[p[0]] = p[1]; });
+			post({ type: "status", phase: "stream-ready", count: pairs.length, base: base });
 			return map;
 		});
 	}).catch(function (e) {

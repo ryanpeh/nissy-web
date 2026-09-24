@@ -249,6 +249,10 @@ requirement to design around.
 
 ## 6. Changelog
 
+- **2026-09-24** — **Hosted.** Published the project to `ryanpeh/nissy-web`
+  (`main` = source; `tables` branch = the 2.97 GB chunk set) and pointed the app
+  at `https://raw.githubusercontent.com/ryanpeh/nissy-web/tables/` (local
+  fallback). Verified end-to-end from raw: `F' U' R' (3)`.
 - **2026-09-24** — **Main app streams tables.** `web/` now builds the streaming
   fork, fetches `index.json`+manifests (`STREAM_INDEX`) and registers
   `nissyStreamTables`; added the `optimal` step. Verified: `optimal` -> `F' U' R'

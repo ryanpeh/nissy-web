@@ -1,5 +1,10 @@
 # Hosting the table chunks
 
+> **Hosted at:** `https://raw.githubusercontent.com/ryanpeh/nissy-web/tables/`
+> (branch `tables` of `ryanpeh/nissy-web`). The app tries this first, then a
+> same-origin `/dist-tables/`. Verified end-to-end: the app downloaded the 3 GB
+> from raw and solved `R U F` optimally (`F' U' R' (3)`) in ~347 s (download-bound).
+
 `lightplus/package-tables.sh` turns the generated tables into a set of files the
 browser loader (`lightplus/src/streamlib.js`) fetches:
 
