@@ -583,7 +583,7 @@ function handleStatus(m) {
 			if (!busy) setStatus(m.message || "Starting engine\u2026");
 			break;
 		case "stream-ready":
-			if (!busy) setStatus("Engine ready (" + m.count + " streamed tables).");
+			if (!busy) setStatus("Engine ready (" + m.count + (m.count === 1 ? " table" : " tables") + " available to stream).");
 			break;
 		case "no-stream":
 			if (!busy) setStatus(m.message, "warn");
