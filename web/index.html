@@ -108,8 +108,9 @@
 <body>
 	<h1>Nissy 2.0.8 &mdash; WebAssembly</h1>
 	<div class="sub">
-		Runs the real Nissy solver in a Web Worker. Streamed tables are cached in
-		OPFS, so only the first run downloads them.
+		Runs the real Nissy solver in a Web Worker. Tables are generated locally
+		by default (or downloaded), and cached &mdash; so only the first use of a
+		table is slow.
 	</div>
 
 	<div id="status">Starting engine&hellip;</div>
@@ -155,10 +156,10 @@
 	<div class="row">
 		<label for="tableMode">Tables</label>
 		<select id="tableMode">
-			<option value="generate">Generate locally (default, no download)</option>
-			<option value="download">Download precomputed (faster, uses data)</option>
+			<option value="generate">Generate locally (default)</option>
+			<option value="download">Download big tables</option>
 		</select>
-		<span class="hint">Changing this reloads the page.</span>
+		<span class="hint">Reloads the page when changed.</span>
 	</div>
 
 	<div class="field">
@@ -170,13 +171,19 @@
 	<details class="hintbox">
 		<summary>Help / notes</summary>
 		<div class="hint">
-			By default tables are <b>generated in-browser</b> (cached in
-			IndexedDB); switch <b>Tables</b> to "Download precomputed" to stream
-			them instead (cached in OPFS). Either way it is a one-time cost.
-			<b>light</b> is a true <i>optimal</i> solve (~114&nbsp;MB of tables:
-			<code>pt_drud_sym16_HTM</code> + <code>pt_corners_HTM</code>).
-			<b>optimal</b> streams the full ~2.3&nbsp;GB table. The progress bar
-			shows download and generation progress.
+			<b>Generate locally</b> builds the shared support set (~40&nbsp;s) and
+			the per-step tables in your browser, cached in IndexedDB.
+			<b>Download big tables</b> streams the large shared tables
+			(<code>invtables</code>, <code>mtables</code>, <code>ttables</code>,
+			<code>symc_*</code>, <code>sd_*</code>, <code>pt_drud_sym16_HTM</code>,
+			<code>pt_corners_HTM</code>) from the network instead, cached in OPFS.
+			<br><br>
+			In <b>both</b> modes the <code>optimal</code> table (~2.3&nbsp;GB) is
+			always streamed, because it cannot be built in wasm; and any small
+			per-step table that isn't hosted (e.g. <code>pt_eofb_HTM</code>,
+			<code>pt_drudfin_noE_sym16_drud</code>) is always generated. So only
+			the shared tables differ between the two modes. <b>light</b> is a true
+			<i>optimal</i> solve (~114&nbsp;MB of tables).
 		</div>
 	</details>
 
