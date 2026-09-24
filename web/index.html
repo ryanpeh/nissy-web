@@ -161,16 +161,12 @@
 	<details class="hintbox">
 		<summary>Help / notes</summary>
 		<div class="hint">
-			First run generates the ~590&nbsp;MB support tables in wasm and may take
-			a few minutes; only the first run is slow. Running <code>twophase</code>
-			additionally generates ~126&nbsp;MB of pruning tables the first time
-			(<code>pt_drud_sym16_HTM</code> + <code>pt_drudfin_noE_sym16_drud</code>).
-			The <b>light</b> step is a true <i>optimal</i> solve using ~114&nbsp;MB of
-			tables (<code>pt_drud_sym16_HTM</code> + <code>pt_corners_HTM</code>) and
-			is slow single-threaded; the fast <code>optimal</code> step needs a
-			~2.3&nbsp;GB table and is not available in the browser. Everything is
-			cached afterwards; the progress bar shows generation/search activity
-			(pruning-table generation is the only phase with an exact percentage).
+			Precomputed tables are <b>streamed</b> from the network and cached in
+			<b>OPFS</b>, so only the first use of a given table downloads it.
+			<b>light</b> is a true <i>optimal</i> solve (~114&nbsp;MB of tables:
+			<code>pt_drud_sym16_HTM</code> + <code>pt_corners_HTM</code>).
+			<b>optimal</b> streams the full ~2.3&nbsp;GB table. The progress bar
+			shows download and generation progress.
 		</div>
 	</details>
 
